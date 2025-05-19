@@ -24,7 +24,7 @@ This project tackles this idea by applying 4 steps.
 The idea behind this concept is that more steps do not necessarily mean better by default we
 want more steps only if it gives us a more "distributed" or smooth
 reasoning step, with less information packed in each step. Inorder to quantify this I formulated this metric based on $k$ amd the semantic load 
-of each step, roughly represented by the $L_2$ norm of its sentence embeding vector, $||\hat{e}_{i}||$:
+of each step, roughly represented by the $L_2$ norm of its sentence embeding vector, $||\hat{e}_{i}||$ 
 $M(k, \hat{e}) = \frac{k}{1 + \sum_{i=1}^{k} ||\hat{e}_{i}||}$
 
 A higher score $M$ means we have a finer granularity i.e the reasoning is distributated more evenly 
