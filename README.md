@@ -33,8 +33,8 @@ across more steps.
 The project uses sentence embeddings from all-MiniLM-L6-v2, however this is something that i'm currently working on to 
 use better options.
 
-## Setup
-### Prerequisites 
+
+## Prerequisites for the setup 
 * Python 3.7+
 * OpenAI API key
 ## Data
