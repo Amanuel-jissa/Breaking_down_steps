@@ -11,6 +11,7 @@ embedding_modl = SentenceTransformer('all-MiniLM-L6-v2')
 #as the threshold increases we expect a finner step structure
 #which means we should expect more steps to be embedded.
 Coherence_thershold = float(0.90)
+num_steps = 2
 #we don't want to iteratively continue to add the steps so for now i have minimized it to 10 steps.
 #we can only get at most 10 reasoning steps for any question
 max_step = 10
@@ -19,8 +20,30 @@ with open('/Users/perfectoid/Downloads/metadata-2.jsonl') as f:
     questions = [json.loads(line) for line in f if line.strip()]
 responses = {}
 def computing_granularity(steps):
-    # This function will score our reasoning finness/granularity. It is the number of steps divided by total embedding norm.
-    #if the score is high it means the reasoning has a fine structure and is less dense with "information".
+    """
+    Calculates a "granularity score" for a given list of reasoninng steps.
+
+    This function tries to quantify how finely a reasoning process has been
+    broken down. The idea is that more steps, combined with less "dense" or
+    semantically heavy individual steps (indicated by lower embedding norms),
+    should result in a higher score. It's a bit of an experimental metric,
+    but it seems to give a decent signal.
+
+    The score is calculated as: `(Number of Steps) / (1 + Sum of L2 Norms of Step Embeddings)`.
+    We add 1 to the denominator to prevent division by zero and to keep the
+    score from becoming astronomically high for very small norms.
+
+    A higher score suggests a finer, less information-packed structure
+    in the reasoning, which aligns with our goal of "minimal, logically necessary steps."
+
+    Args:
+        steps (list[str]): A list of string representations of individual
+                           reasoning steps.
+
+    Returns:
+        float: The computed granularity score. Returns 0.0 if the input
+               `steps` list is empty, as there's no granularity to measure.
+    """
     if not steps:
         return 0.0
     #embedding steps into vectors
@@ -30,8 +53,25 @@ def computing_granularity(steps):
     tot_norm = sum(norms)
     return len(steps) / (1.0 + tot_norm)
 def agent_prompt(task, num_steps):
-    #I tried to come up with a prompt to force the output to be similar to agentic responses.
-    # I don't have experience with agents so some tweeking might be needed here.
+    """
+       Constructs a specific prompt tailored for an AI planning agent.
+
+       This prompt is used to push a language model (like GPT-4) to act as
+       a step-by-step planner. I've tried to be very explicit about the
+       desired output format and the nature of the steps (atomic, tool-aligned)
+       to get consistent and parseable responses. This part took a bit of
+       tweaking to get the LLM to consistently follow instructions, especially
+       regarding the exact number of steps and the no-explanation rule.
+
+       Args:
+           task (str): The main task or question that the AI agent needs to break down.
+           num_steps (int): The exact number of atomic reasoning steps we're
+                            requesting the agent to provide. This is crucial for
+                            our iterative refinement process.
+
+       Returns:
+           str: The complete prompt string ready to be sent to the OpenAI API.
+       """
     return (
         "You are an AI planner operating in a tool-using agent system. "
         "You must break the following task into a sequence of minimal, logically necessary steps "
@@ -49,7 +89,7 @@ def agent_prompt(task, num_steps):
 for i in questions:
     task_id = i["task_id"]
     task_text = i["Question"]
-    num_steps = 2
+
     final_response = None
     last_score = 0.0
     while True:
